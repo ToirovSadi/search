@@ -2,7 +2,9 @@ package search
 
 import (
 	"context"
+	"io/ioutil"
 	"strings"
+	"sync"
 )
 
 // Result describes result of search
@@ -18,25 +20,52 @@ type Result struct {
 }
 
 func All(ctx context.Context, phrase string, files []string) <-chan []Result {
+	wg := sync.WaitGroup{}
 	ch := make(chan []Result)
-	//wg := sync.WaitGroup{}
+	_, cancel := context.WithCancel(ctx)
+	for i := 0; i < len(files); i++ {
+		file := files[i]
+		wg.Add(1)
+		go func(file string, ch chan []Result, i int) {
+			defer wg.Done()
+			words := search(file, phrase, int64(i), false)
+			if len(words) > 0 {
+				ch <- words
+			}
+		}(file, ch, i)
+	}
 
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	cancel()
 	return ch
 }
 
-func Search(line string, phrase string, index int64, first bool) (res []Result) {
-	for strings.Contains(line, phrase) {
-		idx := strings.Index(line, phrase)
-		res = append(res, Result{
-			Phrase:  phrase,
-			Line:    line,
-			LineNum: index,
-			ColNum:  int64(idx),
-		})
-		if first == true {
-			return res
+func search(fileName string, phrase string, index int64, first bool) (res []Result) {
+	data, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+		return res
+	}
+	lines := strings.Split(string(data), "\n")
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		givenLine := line
+		for strings.Contains(line, phrase) {
+			idx := strings.Index(line, phrase)
+			res = append(res, Result{
+				Phrase:  phrase,
+				Line:    givenLine,
+				LineNum: index + 1,
+				ColNum:  int64(idx + 1),
+			})
+			if first == true {
+				return res
+			}
+			line = strings.Replace(line, phrase, string('#')+phrase[1:], 1)
 		}
-		line = strings.Replace(line, phrase, string('#')+phrase[1:], 1)
 	}
 	return res
 }
