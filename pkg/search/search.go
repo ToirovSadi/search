@@ -19,6 +19,7 @@ type Result struct {
 	ColNum int64
 }
 
+//All find all phrases from files and return them
 func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	wg := sync.WaitGroup{}
 	ch := make(chan []Result)
@@ -47,7 +48,6 @@ func search(fileName string, phrase string, index int64, first bool) (res []Resu
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		panic(err)
-		return res
 	}
 	lines := strings.Split(string(data), "\n")
 	for i := 0; i < len(lines); i++ {
