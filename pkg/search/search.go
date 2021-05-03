@@ -44,6 +44,37 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	return ch
 }
 
+func Any(ctx context.Context, phrase string, files []string) <-chan Result {
+	wg := sync.WaitGroup{}
+	ch := make(chan Result)
+	findResult := Result{}
+	_, cancel := context.WithCancel(ctx)
+	for i := 0; i < len(files); i++ {
+		file := files[i]
+		wg.Add(1)
+		go func(file string, ch chan Result) {
+			defer wg.Done()
+			words := search(file, phrase, true)
+			if len(words) > 0 {
+				findResult = words[0]
+			}
+		}(file, ch)
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		wg.Wait()
+		if findResult != (Result{}) {
+			ch <- findResult
+		}
+		close(ch)
+		cancel()
+	}()
+	wg.Wait()
+	return ch
+}
+
 func search(fileName string, phrase string, first bool) (res []Result) {
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
