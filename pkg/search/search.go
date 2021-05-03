@@ -51,6 +51,9 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	_, cancel := context.WithCancel(ctx)
 	for i := 0; i < len(files); i++ {
 		file := files[i]
+		if findResult != (Result{}) {
+			break
+		}
 		wg.Add(1)
 		go func(file string, ch chan Result) {
 			defer wg.Done()
