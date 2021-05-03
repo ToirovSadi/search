@@ -27,13 +27,13 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	for i := 0; i < len(files); i++ {
 		file := files[i]
 		wg.Add(1)
-		go func(file string, ch chan []Result, i int) {
+		go func(file string, ch chan []Result) {
 			defer wg.Done()
-			words := search(file, phrase, int64(i), false)
+			words := search(file, phrase, false)
 			if len(words) > 0 {
 				ch <- words
 			}
-		}(file, ch, i)
+		}(file, ch)
 	}
 
 	go func() {
@@ -44,7 +44,7 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	return ch
 }
 
-func search(fileName string, phrase string, index int64, first bool) (res []Result) {
+func search(fileName string, phrase string, first bool) (res []Result) {
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		panic(err)
@@ -58,7 +58,7 @@ func search(fileName string, phrase string, index int64, first bool) (res []Resu
 			res = append(res, Result{
 				Phrase:  phrase,
 				Line:    givenLine,
-				LineNum: index + 1,
+				LineNum: int64(i + 1),
 				ColNum:  int64(idx + 1),
 			})
 			if first == true {
