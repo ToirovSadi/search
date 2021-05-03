@@ -64,7 +64,6 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		wg.Wait()
 		if findResult != (Result{}) {
 			ch <- findResult
 		}
